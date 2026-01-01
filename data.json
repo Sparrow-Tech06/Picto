@@ -1,0 +1,26 @@
+[
+  {
+    "symbol": "🚦",
+    "answer": "Traffic Signal",
+    "options": ["Traffic Signal", "Hospital"],
+    "bg": "#E3F2FD"
+  },
+  {
+    "symbol": "♻️",
+    "answer": "Recycle",
+    "options": ["Recycle", "No Entry"],
+    "bg": "#E8F5E9"
+  },
+  {
+    "symbol": "⚡",
+    "answer": "Electric Danger",
+    "options": ["Electric Danger", "Water"],
+    "bg": "#FFFDE7"
+  },
+  {
+    "symbol": "🚭",
+    "answer": "No Smoking",
+    "options": ["No Smoking", "Parking"],
+    "bg": "#FCE4EC"
+  }
+]
