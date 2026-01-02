@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Learn Symbols Pro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+  :root { --primary: #6c5ce7; --success: #00b894; }
+  body { background: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+  /* Smooth Progress Bar */
+  .progress { height: 10px; border-radius: 10px; background: #dfe6e9; }
+  .progress-bar { transition: width 0.5s ease; background: var(--primary); }
+
+  .card-ui {
+    border-radius: 30px;
+    padding: 30px;
+    min-height: 400px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+    border: 4px solid #fff;
+    transition: transform 0.3s ease;
+  }
+
+  .symbol { font-size: 100px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.1)); }
+
+  .option-btn {
+    border-radius: 15px;
+    font-size: 18px;
+    font-weight: 600;
+    padding: 12px;
+    border: 2px solid #eee;
+    background: white;
+    transition: all 0.2s;
+  }
+  .option-btn:hover { background: #f8f9fa; transform: translateY(-2px); border-color: var(--primary); }
+
+  /* Custom Feedback Overlay (No Glitch) */
+  .overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255,255,255,0.9);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+
+  /* Animations */
+  .bounce-enter-active { animation: bounce-in 0.5s; }
+  @keyframes bounce-in {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+
+  .shake { animation: shake 0.5s; }
+  @keyframes shake {
+    0%, 100% {transform: translateX(0);}
+    25% {transform: translateX(-10px);}
+    75% {transform: translateX(10px);}
+  }
+</style>
+</head>
+
+<body>
+<div id="app">
+
+  <section v-if="screen==='home'" class="text-center py-5">
+    <div class="display-1 mb-3">🎮</div>
+    <h1 class="fw-bold">Learn Symbols</h1>
+    <p class="text-muted">Test your knowledge and win stars!</p>
+    <button class="btn btn-primary btn-lg px-5 rounded-pill shadow" @click="startGame">
+      🚀 Start Playing
+    </button>
+  </section>
+
+  <main v-if="screen==='game'" class="container py-4">
+    <header class="d-flex align-items-center mb-4">
+      <button class="btn btn-light rounded-pill shadow-sm" @click="screen='home'">⬅ Exit</button>
+      <div class="mx-auto text-center">
+        <div class="fw-bold text-primary">Score: {{ score }}</div>
+        <div class="small text-muted">Question {{ index + 1 }} of {{ total }}</div>
+      </div>
+    </header>
+
+    <div class="progress mb-4">
+      <div class="progress-bar" :style="{ width: progress + '%' }"></div>
+    </div>
+
+    <section v-if="loaded">
+      <transition name="bounce" mode="out-in">
+        <article class="card-ui text-center" :style="{ background: current.bg }" :key="index" :class="{ shake: isWrong }">
+          <div class="symbol mb-2">{{ current.symbol }}</div>
+          <h3 class="mb-4 fw-bold">Who am I?</h3>
+
+          <div class="d-grid gap-3 mb-4">
+            <button v-for="op in current.options" 
+                    class="option-btn shadow-sm" 
+                    @click="check(op)">
+              {{ op }}
+            </button>
+          </div>
+        </article>
+      </transition>
+    </section>
+  </main>
+
+  <section v-if="screen==='result'" class="text-center py-5">
+    <div class="display-1">🏆</div>
+    <h2 class="fw-bold">Awesome!</h2>
+    <p>You scored <strong>{{ score }}</strong> points!</p>
+    <button class="btn btn-success btn-lg px-5 rounded-pill" @click="restart">Play Again</button>
+  </section>
+
+  <transition name="bounce">
+    <div class="overlay" v-if="feedback.show">
+      <div class="text-center">
+        <div style="font-size: 80px;">{{ feedback.icon }}</div>
+        <h2 class="fw-bold">{{ feedback.text }}</h2>
+        <button class="btn btn-dark mt-4 px-5 rounded-pill" @click="closeFeedback">Next ➔</button>
+      </div>
+    </div>
+  </transition>
+
+</div>
+
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      screen: 'home',
+      cards: [],
+      index: 0,
+      score: 0,
+      loaded: false,
+      isWrong: false,
+      feedback: { show: false, icon: '', text: '', action: '' }
+    }
+  },
+  computed: {
+    current() { return this.cards[this.index] || {}; },
+    total() { return this.cards.length; },
+    progress() { return ((this.index) / this.total) * 100; }
+  },
+  methods: {
+    startGame() {
+      this.index = 0;
+      this.score = 0;
+      this.screen = 'game';
+    },
+    check(ans) {
+      if (ans === this.current.answer) {
+        this.score += this.current.points || 10;
+        this.playAudio('success'); // Add audio file if you have
+        
+        if (this.index === this.total - 1) {
+          this.triggerConfetti();
+          this.showFeedback('🎉', 'Brilliant! You did it!', 'result');
+        } else {
+          this.showFeedback('✅', 'Correct! Well Done.', 'next');
+        }
+      } else {
+        this.isWrong = true;
+        this.playAudio('error');
+        setTimeout(() => this.isWrong = false, 500);
+      }
+    },
+    showFeedback(icon, text, action) {
+      this.feedback = { show: true, icon, text, action };
+    },
+    closeFeedback() {
+      this.feedback.show = false;
+      if (this.feedback.action === 'next') this.index++;
+      if (this.feedback.action === 'result') this.screen = 'result';
+    },
+    triggerConfetti() {
+      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+    },
+    restart() {
+      this.index = 0;
+      this.score = 0;
+      this.screen = 'home';
+    },
+    playAudio(type) {
+      // let audio = new Audio(`./sounds/${type}.mp3`);
+      // audio.play();
+    }
+  },
+  mounted() {
+    // For demo, hardcoding data. Replace with your fetch('data.json')
+    fetch('data.json')
+      .then(r => r.json())
+      .then(d => {
+        this.cards = d;
+        this.loaded = true;
+      })
+      .catch(e => {
+          // Fallback static data if fetch fails
+          this.cards = [{symbol:"🍎", answer:"Apple", options:["Ant","Apple","Axe"], bg:"#fff"}];
+          this.loaded = true;
+      });
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
