@@ -1,23 +1,20 @@
 [
   {
-    "symbol": "🍎",
-    "answer": "Apple",
-    "options": ["Mango", "Apple", "Banana", "Grapes"],
-    "bg": "#ffedeb",
-    "points": 10
+    "symbol": "🐘",
+    "answer": "Elephant",
+    "options": ["Tiger", "Elephant", "Giraffe"],
+    "bg": "rgba(230, 240, 255, 0.4)"
   },
   {
-    "symbol": "🦁",
-    "answer": "Lion",
-    "options": ["Cat", "Dog", "Lion", "Tiger"],
-    "bg": "#fff9db",
-    "points": 10
+    "symbol": "🚀",
+    "answer": "Rocket",
+    "options": ["Car", "Rocket", "Plane"],
+    "bg": "rgba(240, 230, 255, 0.4)"
   },
   {
-    "symbol": "🚗",
-    "answer": "Car",
-    "options": ["Cycle", "Car", "Bus", "Train"],
-    "bg": "#e7f5ff",
-    "points": 10
+    "symbol": "🍕",
+    "answer": "Pizza",
+    "options": ["Burger", "Pizza", "Cake"],
+    "bg": "rgba(255, 245, 230, 0.4)"
   }
 ]
