@@ -9,12 +9,12 @@
     "symbol": "🚀",
     "answer": "Rocket",
     "options": ["Car", "Rocket", "Plane"],
-    "bg": "rgba(240, 230, 255, 0.4)"
+    "bg": "rgba(110, 2, 111, 0.4)"
   },
   {
     "symbol": "🍕",
     "answer": "Pizza",
     "options": ["Burger", "Pizza", "Cake"],
-    "bg": "rgba(255, 245, 230, 0.4)"
+    "bg": "rgba(251, 228, 128, 0.4)"
   }
 ]
