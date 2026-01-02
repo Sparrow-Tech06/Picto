@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Symbol Master</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
+
+  body { 
+    background: #f8f9fd; 
+    font-family: 'Quicksand', sans-serif;
+    color: #2d3436;
+    overflow-x: hidden;
+  }
+
+  /* Header & Progress */
+  .game-header { padding: 20px; }
+  .heart-container { font-size: 24px; letter-spacing: 5px; }
+  .heart-lost { filter: grayscale(1) opacity(0.3); transition: 0.3s; }
+  
+  .progress-slim {
+    height: 6px;
+    background: #eee;
+    border-radius: 10px;
+    overflow: hidden;
+    width: 60%;
+    margin: 10px auto;
+  }
+  .progress-bar-inner {
+    height: 100%;
+    background: #6c5ce7;
+    transition: width 0.4s ease;
+  }
+
+  /* Main Card Design */
+  .card-container {
+    max-width: 450px;
+    margin: 0 auto;
+    padding: 15px;
+  }
+
+  .card-slim {
+    background: white;
+    border-radius: 40px;
+    padding: 40px 25px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.03);
+    border: 1px solid rgba(0,0,0,0.05);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .symbol-display {
+    font-size: 110px;
+    margin-bottom: 20px;
+    display: block;
+    filter: drop-shadow(0 10px 10px rgba(0,0,0,0.1));
+  }
+
+  /* Buttons Styling */
+  .option-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 30px;
+  }
+
+  .btn-option {
+    background: #ffffff;
+    border: 2px solid #f0f0f0;
+    border-radius: 20px;
+    padding: 15px 10px;
+    font-weight: 700;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    color: #444;
+  }
+
+  .btn-option:active {
+    transform: scale(0.95);
+    background: #f8f9fa;
+  }
+
+  /* Overlays */
+  .overlay-fixed {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(255,255,255,0.95);
+    z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(5px);
+  }
+
+  /* Feedback Animations */
+  .shake-card { animation: shake 0.4s ease-in-out; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+  }
+
+  .fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
+  .fade-enter-from, .fade-leave-to { opacity: 0; }
+</style>
+</head>
+
+<body>
+<div id="app">
+
+  <section v-if="screen==='home'" class="text-center py-5 container">
+    <div style="font-size: 100px; margin-top: 50px;">🧠</div>
+    <h1 class="fw-bold mt-3">Symbol Quiz</h1>
+    <p class="text-muted">Learn symbols the fun way!</p>
+    <button class="btn btn-dark btn-lg px-5 rounded-pill mt-4 shadow" @click="startGame">
+      Play Now
+    </button>
+  </section>
+
+  <main v-if="screen==='game'" class="container-fluid p-0">
+    <header class="game-header d-flex justify-content-between align-items-center">
+      <button class="btn btn-sm btn-light rounded-circle" @click="screen='home'">✕</button>
+      
+      <div class="heart-container">
+        <span v-for="h in 3" :key="h" :class="{ 'heart-lost': h > lives }">❤️</span>
+      </div>
+
+      <div class="fw-bold text-muted">{{ score }} pts</div>
+    </header>
+
+    <div class="progress-slim">
+      <div class="progress-bar-inner" :style="{ width: progress + '%' }"></div>
+    </div>
+
+    <div class="card-container text-center mt-3">
+      <transition name="fade" mode="out-in">
+        <div v-if="loaded" class="card-slim" :style="{ background: current.bg + '40' }" :class="{ 'shake-card': isWrong }" :key="index">
+          <span class="symbol-display">{{ current.symbol }}</span>
+          <h5 class="text-muted small text-uppercase fw-bold ls-1">What is this?</h5>
+          
+          <div class="option-grid">
+            <button v-for="op in current.options" 
+                    @click="check(op)" 
+                    class="btn-option shadow-sm">
+              {{ op }}
+            </button>
+          </div>
+
+          <button class="btn btn-link btn-sm mt-4 text-decoration-none text-muted" @click="next">Skip</button>
+        </div>
+      </transition>
+    </div>
+  </main>
+
+  <transition name="fade">
+    <div class="overlay-fixed" v-if="feedback.show">
+      <div class="text-center">
+        <div style="font-size: 80px;">{{ feedback.icon }}</div>
+        <h2 class="fw-bold">{{ feedback.text }}</h2>
+        <p v-if="feedback.subtext">{{ feedback.subtext }}</p>
+        <button class="btn btn-dark mt-3 px-5 rounded-pill" @click="handleAction">
+          {{ feedback.btnText || 'Continue' }}
+        </button>
+      </div>
+    </div>
+  </transition>
+
+</div>
+
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      screen: 'home',
+      cards: [],
+      index: 0,
+      score: 0,
+      lives: 3,
+      loaded: false,
+      isWrong: false,
+      feedback: { show: false, icon: '', text: '', subtext: '', action: '', btnText: '' }
+    }
+  },
+  computed: {
+    current() { return this.cards[this.index] || {}; },
+    total() { return this.cards.length; },
+    progress() { return ((this.index) / this.total) * 100; }
+  },
+  methods: {
+    startGame() {
+      this.index = 0;
+      this.score = 0;
+      this.lives = 3;
+      this.screen = 'game';
+      this.feedback.show = false;
+    },
+    check(ans) {
+      if (ans === this.current.answer) {
+        this.score += 10;
+        if (this.index === this.total - 1) {
+          confetti({ particleCount: 150, spread: 70 });
+          this.showFeedback('🏆', 'You Won!', `Final Score: ${this.score}`, 'restart', 'Play Again');
+        } else {
+          this.showFeedback('✅', 'Correct!', '', 'next', 'Next Question');
+        }
+      } else {
+        this.loseLife();
+      }
+    },
+    loseLife() {
+      this.lives--;
+      this.isWrong = true;
+      setTimeout(() => this.isWrong = false, 400);
+
+      if (this.lives === 0) {
+        this.showFeedback('💔', 'Game Over', 'Better luck next time!', 'restart', 'Try Again');
+      }
+    },
+    showFeedback(icon, text, subtext, action, btnText) {
+      this.feedback = { show: true, icon, text, subtext, action, btnText };
+    },
+    handleAction() {
+      this.feedback.show = false;
+      if (this.feedback.action === 'next') this.index++;
+      if (this.feedback.action === 'restart') this.startGame();
+    },
+    next() {
+      if (this.index < this.total - 1) this.index++;
+    }
+  },
+  mounted() {
+    fetch('data.json')
+      .then(r => r.json())
+      .then(d => {
+        this.cards = d;
+        this.loaded = true;
+      })
+      .catch(() => {
+        // Sample data for preview
+        this.cards = [
+          {symbol: "🐘", answer: "Elephant", options: ["Cat", "Dog", "Elephant", "Ant"], bg: "#e0f2f1"},
+          {symbol: "🚀", answer: "Rocket", options: ["Car", "Rocket", "Plane", "Cycle"], bg: "#fff3e0"}
+        ];
+        this.loaded = true;
+      });
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
