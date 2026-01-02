@@ -1,0 +1,23 @@
+[
+  {
+    "symbol": "🍎",
+    "answer": "Apple",
+    "options": ["Mango", "Apple", "Banana", "Grapes"],
+    "bg": "#ffedeb",
+    "points": 10
+  },
+  {
+    "symbol": "🦁",
+    "answer": "Lion",
+    "options": ["Cat", "Dog", "Lion", "Tiger"],
+    "bg": "#fff9db",
+    "points": 10
+  },
+  {
+    "symbol": "🚗",
+    "answer": "Car",
+    "options": ["Cycle", "Car", "Bus", "Train"],
+    "bg": "#e7f5ff",
+    "points": 10
+  }
+]
