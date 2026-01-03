@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Learn Symbols</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Bootstrap -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Vue -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+<!-- Howler -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+
+<style>
+body{background:#fafafa;font-family:system-ui;}
+.logo{font-size:70px;}
+.symbol{font-size:90px;}
+
+.card-ui{
+  border-radius:22px;
+  padding:25px;
+  min-height:360px;
+}
+
+.option-btn{
+  border-radius:50px;
+  font-size:16px;
+}
+
+/* slide animation */
+.slide-enter-active{animation:slideIn .4s ease;}
+@keyframes slideIn{
+  from{transform:translateX(60px);opacity:0}
+  to{transform:translateX(0);opacity:1}
+}
+
+/* skeleton */
+.skeleton{
+  height:360px;
+  border-radius:22px;
+  background:linear-gradient(90deg,#eee,#f5f5f5,#eee);
+  animation:shimmer 1.2s infinite;
+}
+@keyframes shimmer{
+  0%{background-position:-200px}
+  100%{background-position:200px}
+}
+
+.hearts span{font-size:20px}
+
+/* modal */
+.modal-content{border-radius:22px;border:none;}
+.modal-body{padding:32px 20px;}
+
+.modal-icon{
+  width:90px;height:90px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:40px;
+  margin:auto;
+  animation:pop .4s ease;
+}
+
+@keyframes pop{
+  from{transform:scale(.6);opacity:0}
+  to{transform:scale(1);opacity:1}
+}
+
+.modal-success .modal-icon{background:#e8f9ee;color:#16a34a}
+.modal-success h5{color:#16a34a}
+
+.modal-wrong .modal-icon{background:#fff4e5;color:#f97316}
+.modal-wrong h5{color:#f97316}
+
+.modal-error .modal-icon{background:#fdeaea;color:#dc2626}
+.modal-error h5{color:#dc2626}
+
+.modal-win .modal-icon{background:#eef4ff;color:#2563eb}
+.modal-win h5{color:#2563eb}
+
+.modal-backdrop{background:rgba(0,0,0,.35);}
+</style>
+</head>
+
+<body>
+<div id="app">
+
+<!-- HOME -->
+<section v-if="screen==='home'" class="text-center py-5">
+  <div class="logo">🧠</div>
+  <h3>Learn Symbols</h3>
+  <p class="text-muted">Fun learning game for kids</p>
+  <button class="btn btn-success btn-lg px-5 mt-3" @click="startGame">
+    ▶ Play Now
+  </button>
+</section>
+
+<!-- GAME -->
+<main v-if="screen==='game'" class="container py-3">
+
+<header class="d-flex align-items-center mb-3">
+  <button class="btn btn-sm btn-outline-secondary" @click="goHome">
+    ⬅ Back
+  </button>
+
+  <div class="ms-3 hearts">
+    <span v-for="n in lives">❤️</span>
+  </div>
+
+  <div class="ms-auto small">
+    {{ index+1 }} / {{ total }}
+  </div>
+</header>
+
+<section v-if="!loaded">
+  <div class="skeleton"></div>
+</section>
+
+<section v-else>
+<transition name="slide" mode="out-in">
+<article class="card-ui text-center"
+         :style="{background:current.bg}"
+         :key="index">
+
+  <div class="symbol mb-3">{{ current.symbol }}</div>
+  <h5 class="mb-4">Guess who I am?</h5>
+
+  <div class="d-grid gap-2 mb-3">
+    <button v-for="op in current.options"
+            class="btn btn-outline-dark option-btn"
+            @click="check(op)">
+      🔘 {{ op }}
+    </button>
+  </div>
+
+  <button class="btn btn-sm btn-secondary" @click="next">
+    Skip
+  </button>
+
+</article>
+</transition>
+</section>
+</main>
+
+<!-- MODAL -->
+<div class="modal fade" id="gameModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" :class="modalClass">
+      <div class="modal-body text-center">
+        <div class="modal-icon mb-3">{{ modalIcon }}</div>
+        <h5>{{ modalText }}</h5>
+        <button class="btn btn-primary px-4 mt-3"
+                data-bs-dismiss="modal"
+                @click="modalAction">
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data(){
+    return{
+      screen:'home',
+      cards:[],
+      index:0,
+      loaded:false,
+      lives:3,
+
+      modalIcon:'',
+      modalText:'',
+      modalClass:'',
+      action:'',
+
+      // sounds
+      sCorrect:null,
+      sWrong:null,
+      sWin:null,
+      sOver:null,
+      sClick:null
+    }
+  },
+  computed:{
+    current(){ return this.cards[this.index]; },
+    total(){ return this.cards.length; }
+  },
+  methods:{
+    startGame(){
+      this.sClick.play();
+      this.screen='game';
+      this.restart();
+    },
+    goHome(){
+      this.screen='home';
+    },
+    showModal(icon,text,cls,action){
+      this.modalIcon=icon;
+      this.modalText=text;
+      this.modalClass=cls;
+      this.action=action;
+      new bootstrap.Modal(gameModal,{backdrop:'static'}).show();
+    },
+    modalAction(){
+      if(this.action==='next') this.next();
+      if(this.action==='restart') this.restart();
+    },
+    check(ans){
+      if(ans===this.current.answer){
+        this.sCorrect.play();
+        if(this.index===this.total-1){
+          this.sWin.play();
+          this.showModal('🏆','Congratulations! You completed all questions','modal-win','restart');
+        }else{
+          this.showModal('✔️','Correct Answer','modal-success','next');
+        }
+      }else{
+        this.sWrong.play();
+        this.lives--;
+        if(this.lives<=0){
+          this.sOver.play();
+          this.showModal('💔','Game Over! Try Again','modal-error','restart');
+        }else{
+          this.showModal('😊','Wrong Answer! Try Again','modal-wrong','');
+        }
+      }
+    },
+    next(){
+      if(this.index < this.total-1) this.index++;
+    },
+    restart(){
+      this.index=0;
+      this.lives=3;
+    }
+  },
+  mounted(){
+    // sounds init
+    this.sCorrect = new Howl({src:['https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3']});
+    this.sWrong   = new Howl({src:['https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3']});
+    this.sWin     = new Howl({src:['https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3']});
+    this.sOver    = new Howl({src:['https://assets.mixkit.co/active_storage/sfx/957/957-preview.mp3']});
+    this.sClick   = new Howl({src:['https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3']});
+
+    // fetch JSON data
+    fetch('data.json')
+      .then(res => res.json())
+      .then(data => {
+        this.cards = data;
+        this.loaded = true;
+      });
+  }
+}).mount('#app');
+</script>
+
+</body>
+</html>
